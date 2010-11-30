@@ -1,5 +1,7 @@
 package com.nodeta.scalandra.tests
 
+import com.nodeta.scalandra._
+
 import org.specs._
 import com.nodeta.scalandra.ConnectionProvider
 import com.nodeta.scalandra.pool.StackPool

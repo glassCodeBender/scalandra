@@ -1,5 +1,7 @@
 package com.nodeta.scalandra.map
 
+import com.nodeta.scalandra._
+
 import map.{ColumnFamily => CF, SuperColumnFamily => SCF}
 
 
@@ -29,9 +31,12 @@ trait Keyspace[A, B, C] extends scala.collection.Map[String, ColumnFamily[_]] wi
     }
   }
 
-  def elements = columnFamilies.elements
+  def +[V >: CF[_]](kv: (String, V)) = throw new UnsupportedOperationException
+  def -(key: String) = throw new UnsupportedOperationException
 
-  def size = schema.size
+  def iterator = columnFamilies.iterator
+
+  override def size = schema.size
 
   private def buildColumnFamily(columnFamily : String) : CF[_] = {
     schema(columnFamily)("Type") match {

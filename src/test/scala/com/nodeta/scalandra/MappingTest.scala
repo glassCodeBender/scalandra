@@ -1,5 +1,7 @@
 package com.nodeta.scalandra.tests
 
+import com.nodeta.scalandra._
+
 import org.specs._
 import com.nodeta.scalandra.map._
 import com.nodeta.scalandra.serializer._
@@ -12,13 +14,13 @@ class MappingTest extends Specification {
   def cassandraMap[A, B](map : CassandraMap[String, A], data : scala.collection.Map[String, B]) = {
     val keys = map.keySet.toList.sort(_.compareTo(_) < 0)
     "be able to slice by names" in {
-      val l = List(keys.first, keys.last)
+      val l = List(keys.head, keys.last)
       map.slice(l).keySet must containAll(l)
     }
     "be able to slice by range" in {
       val l = keys.drop(1).dropRight(1)
 
-      val r = map.slice(Range(Some(l.first), Some(l.last), Ascending, l.size))
+      val r = map.slice(Range(Some(l.head), Some(l.last), Ascending, l.size))
       r.keySet must haveTheSameElementsAs(l)
     }
   }
@@ -41,11 +43,11 @@ class MappingTest extends Specification {
     "column access" in {
       "existing column" in {
         "get returns column in option" in {
-          map.get(data.keys.next) must beSomething
+          map.get(data.keys.head) must beSomething
         }
 
         "apply returns column value" in {
-          val key = data.keys.next
+          val key = data.keys.head
           map(key) must equalTo(data(key))
         }
       }
@@ -107,7 +109,7 @@ class MappingTest extends Specification {
     "provide cassandra map functionality" in cassandraMap(cf, data)
     
     "multiget values" in {
-      val key = data.values.next.keys.next
+      val key = data.values.head.keys.head
       cf.map(key) must notBeEmpty
     }
     
@@ -170,7 +172,7 @@ class MappingTest extends Specification {
   }
 
   "StandardRecord" should {
-    val Pair(key, data) = insertStandardData().elements.next
+    val Pair(key, data) = insertStandardData().iterator.next
     val row = new StandardRecord(key, cassandra.ColumnParent("Standard1", None), cassandra)
     
     "provide cassandra map functionality" in record(row, data, false)
@@ -189,8 +191,8 @@ class MappingTest extends Specification {
   }
 
   "SuperColumn" should {
-    val Pair(key, row) = insertSuperData().elements.next
-    val Pair(superColumn, data) = row.elements.next
+    val Pair(key, row) = insertSuperData().iterator.next
+    val Pair(superColumn, data) = row.iterator.next
 
     val r = new StandardRecord(key, cassandra.ColumnParent("Super1", Some(superColumn)), cassandra)
     
@@ -211,7 +213,7 @@ class MappingTest extends Specification {
 
 
   "SuperRecord" should {
-    val Pair(key, data) = insertSuperData().elements.next
+    val Pair(key, data) = insertSuperData().iterator.next
     val row = new SuperRecord(key, cassandra.Path("Super1"), cassandra)
 
     "provide cassandra map functionality" in record(row, data, true)

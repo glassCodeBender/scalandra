@@ -1,5 +1,7 @@
 package com.nodeta.scalandra.map
 
+import com.nodeta.scalandra._
+
 import scala.collection.immutable.ListMap
 import scala.collection.mutable.{Map => MMap}
 
@@ -7,8 +9,8 @@ trait Record[A, B] extends CassandraMap[A, B] {
   val key : String
   val path : Path[_, _]
   
-  def size = {
-    elements.toList.size
+  override def size = {
+    toList.size
   }
 }
 
@@ -19,20 +21,20 @@ class StandardRecord[A, B, C](val key : String, val path : ColumnParent[A, B], p
   
   sealed protected trait ListPredicate extends StandardRecord[A, B, C] {
     def constraint : Iterable[B]
-    override def elements = {
-      this.client.get(this.key, this.path, this.client.StandardSlice(constraint)).elements
+    override def iterator = {
+      this.client.get(this.key, this.path, this.client.StandardSlice(constraint)).iterator
     }
   }
   
   sealed protected trait RangePredicate extends StandardRecord[A, B, C] {
     def constraint : Range[B]
-    override def elements = {
-      this.client.get(this.key, this.path, this.client.StandardSlice(this.constraint)).elements
+    override def iterator = {
+      this.client.get(this.key, this.path, this.client.StandardSlice(this.constraint)).iterator
     }
   }
   
-  def elements = {
-    client.get(key, path, client.StandardSlice(defaultRange)).elements
+  def iterator = {
+    client.get(key, path, client.StandardSlice(defaultRange)).iterator
   }
   
   def get(column : B) : Option[C] = {
@@ -69,20 +71,20 @@ class SuperRecord[A, B, C](val key : String, val path : Path[A, B], protected va
   
   sealed protected trait ListPredicate extends SuperRecord[A, B, C] {
     def constraint : Iterable[A]
-    override def elements = {
-      this.client.get(this.key, this.path, this.client.SuperSlice(constraint)).elements
+    override def iterator = {
+      this.client.get(this.key, this.path, this.client.SuperSlice(constraint)).iterator
     }
   }
   
   sealed protected trait RangePredicate extends SuperRecord[A, B, C] {
     def constraint : Range[A]
-    override def elements = {
-      this.client.get(this.key, this.path, this.client.SuperSlice(this.constraint)).elements
+    override def iterator = {
+      this.client.get(this.key, this.path, this.client.SuperSlice(this.constraint)).iterator
     }
   }
   
-  def elements = {
-    client.get(key, path, client.SuperSlice(defaultRange)).elements
+  def iterator = {
+    client.get(key, path, client.SuperSlice(defaultRange)).iterator
   }
   
   def get(column : A) : Option[scala.collection.Map[B, C]] = {

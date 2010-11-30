@@ -6,6 +6,8 @@ import map.{ColumnFamily => Fam, StandardColumnFamily => CF, SuperColumnFamily =
 import org.apache.cassandra.{thrift => cassandra}
 import java.lang.IllegalArgumentException
 
+import com.nodeta.scalandra
+
 /**
  * This class is a lightweight wrapper for thrift. It supports three levels of
  * serialization.

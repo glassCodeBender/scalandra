@@ -1,11 +1,13 @@
 package com.nodeta.scalandra.tests
 
+import com.nodeta.scalandra
+
 import org.specs._
 import com.nodeta.scalandra.serializer._
 
 class PathTest extends Specification {  
   "Path" should {
-    val _serializer = Serialization(StringSerializer, StringSerializer, StringSerializer)
+    val _serializer = scalandra.Serialization(StringSerializer, StringSerializer, StringSerializer)
     val path = new scalandra.Path[String, String] {
       val serializer = _serializer
       val columnFamily = "test"
@@ -24,7 +26,7 @@ class PathTest extends Specification {
     }
     
     "ColumnParent should not have column" in {
-      val path = new ColumnParent[String, String] {
+      val path = new scalandra.ColumnParent[String, String] {
         val serializer = _serializer
         val columnFamily = "test"
         val superColumn = Some("test")
@@ -33,7 +35,7 @@ class PathTest extends Specification {
     }
     
     "ColumnPath should have column" in {
-      val path = new ColumnPath[String, String] {
+      val path = new scalandra.ColumnPath[String, String] {
         val serializer = _serializer
         val columnFamily = "test"
         val superColumn = Some("test")

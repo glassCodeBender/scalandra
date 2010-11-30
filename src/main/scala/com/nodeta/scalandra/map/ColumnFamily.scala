@@ -1,5 +1,7 @@
 package com.nodeta.scalandra.map
 
+import com.nodeta.scalandra._
+
 import org.apache.cassandra.thrift.InvalidRequestException
 
 class UnsupportedActionException(s : String) extends Exception(s) {}
@@ -9,24 +11,16 @@ trait ColumnFamily[A] extends CassandraMap[String, A] { this : Base[_, _, _] =>
   
   protected def build(key : String) : A
   
-  protected sealed class RecordIterator(iter : Iterator[String]) extends Iterator[(String, A)] {
-    def hasNext = iter.hasNext
-    def next() = {
-      val key = iter.next()
-      (key -> build(key))
-    }
-  }
-  
   protected sealed class KeyIterator extends Iterator[String] {
     var start : Option[String] = None
-    var buffer : Iterator[String] = Nil.elements
+    var buffer : Iterator[String] = Iterator.empty
     var end = false
     
     private def updateBuffer() {
       if (end) return
       val keys = client.keys(path.columnFamily, start, None, 100)
       if (keys.isEmpty || keys.size < 100) end = true
-      buffer = keys.elements
+      buffer = keys.iterator
       if (!keys.isEmpty) start = Some(keys.last + ' ')
     }
     
@@ -37,13 +31,12 @@ trait ColumnFamily[A] extends CassandraMap[String, A] { this : Base[_, _, _] =>
     }
     def next : String = buffer.next
   }
-  
-  def elements : Iterator[(String, A)] = new RecordIterator(keys)
-  
-  override def keys : Iterator[String] = new KeyIterator()
+
+  def iterator : Iterator[(String, A)] = keys.iterator.map(k => (k -> build(k)))
+  override def keys : Iterable[String] = new Iterable[String] { def iterator = new KeyIterator() }
   
   def get(key : String) = Some(build(key))
-  lazy val size = { elements.toList.size }
+  override def size = { toList.size }
 
 }
 
@@ -56,7 +49,7 @@ class StandardColumnFamily[A, B, C](protected val path : Path[A, B], protected v
   
   sealed protected trait ListPredicate extends StandardColumnFamily[A, B, C] {
     def constraint : Iterable[String]
-    override def keys = constraint.elements
+    override def keys = constraint
   }
 
   sealed protected trait RangePredicate extends StandardColumnFamily[A, B, C] {
@@ -116,7 +109,7 @@ class SuperColumnFamily[A, B, C](protected val path : Path[A, B], protected val 
 
   sealed protected trait ListPredicate extends SuperColumnFamily[A, B, C] {
     def constraint : Iterable[String]
-    override def keys = constraint.elements
+    override def keys = constraint
   }
   
   sealed protected trait RangePredicate extends SuperColumnFamily[A, B, C] {

@@ -4,6 +4,8 @@ import org.apache.cassandra.thrift.Cassandra
 import java.lang.IllegalArgumentException
 import com.nodeta.scalandra.serializer.Serializer
 
+import com.nodeta.scalandra._
+
 /**
  * Base interface for all client actions.
  *

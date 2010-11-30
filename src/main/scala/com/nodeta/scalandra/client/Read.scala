@@ -5,11 +5,12 @@ import com.nodeta.scalandra.serializer.{Serializer, NonSerializer}
 import org.apache.cassandra.thrift
 import org.apache.cassandra.thrift.{NotFoundException, ThriftGlue}
 
-import java.util.{List => JavaList}
-import scala.collection.jcl.{ArrayList, Conversions, Map => JavaMap}
+import java.util.{List => JavaList, Map => JavaMap}
+import scala.collection.JavaConversions._
 import scala.collection.immutable.ListMap
+import scala.collection.mutable.Buffer
 
-import scalandra.{ColumnPath, ColumnParent}
+import com.nodeta.scalandra._
 
 /**
  * This mixin contains all read-only actions
@@ -58,8 +59,8 @@ trait Read[A, B, C] { this : Base[A, B, C] =>
   */
   def describe() : Map[String, Map[String, String]] = {
     def convertMap[T](m : java.util.Map[T, java.util.Map[T, T]]) : Map[T, Map[T, T]] = {
-      Map.empty ++ Conversions.convertMap(m).map { case(columnFamily, description) =>
-        (columnFamily -> (Map.empty ++ Conversions.convertMap(description)))
+      Map.empty ++ m map { case(columnFamily, description) =>
+        (columnFamily -> (Map.empty ++ description))
       }
     }
 
@@ -84,7 +85,7 @@ trait Read[A, B, C] { this : Base[A, B, C] =>
   }
   
   private def multigetAny(keys : Iterable[String], path : Path[A, B]) : JavaMap[String, thrift.ColumnOrSuperColumn]= {
-    JavaMap(cassandra.multiget(keyspace, keys, path.toColumnPath, consistency.read))
+    cassandra.multiget(keyspace, keys, path.toColumnPath, consistency.read)
   }
 
   /**
@@ -158,7 +159,7 @@ trait Read[A, B, C] { this : Base[A, B, C] =>
    */
   def get(keys : Iterable[String], path : Path[A, B], predicate : StandardSlice) : Map[String, Map[B, C]] = {
     val result = cassandra.multiget_slice(keyspace, keys, path.toColumnParent, convert(predicate), consistency.read)
-    ListMap() ++ Conversions.convertMap(result).map { case(key, value) =>
+    ListMap() ++ result.map { case(key, value) =>
       key -> (ListMap() ++ value.map(getColumn(_).get))
     }
   }
@@ -168,7 +169,7 @@ trait Read[A, B, C] { this : Base[A, B, C] =>
    */
   def get(keys : Iterable[String], path : Path[A, B], predicate : SuperSlice) : Map[String, Map[A, Map[B, C]]] = {
     val result = cassandra.multiget_slice(keyspace, keys, path.toColumnParent, convert(predicate), consistency.read)
-    ListMap() ++ Conversions.convertMap(result).map { case(key, value) =>
+    ListMap() ++ result.map { case(key, value) =>
       key -> (ListMap() ++ value.map(getSuperColumn(_).get))
     }
   }
@@ -184,7 +185,7 @@ trait Read[A, B, C] { this : Base[A, B, C] =>
     
     val parent = ThriftGlue.createColumnParent(columnFamily, null)
 
-    cassandra.get_range_slice(keyspace, parent, slice, start.getOrElse(""), finish.getOrElse(""), count, consistency.read).map(_.key)
+    cassandra.get_range_slice(keyspace, parent, slice, start.getOrElse(""), finish.getOrElse(""), count, consistency.read).map(_.key).toList
   }
   
   /**
@@ -208,13 +209,12 @@ trait Read[A, B, C] { this : Base[A, B, C] =>
   }
 
   private def resultMap(results : JavaList[thrift.Column]) : Map[B, C] = {
-    val r : List[thrift.Column] = results // Implicit conversion
-    ListMap(r.map(c => (serializer.column.deserialize(c.name) -> serializer.value.deserialize(c.value))).toSeq : _*)
+    ListMap() ++ results.map(c =>
+      (serializer.column.deserialize(c.name) -> serializer.value.deserialize(c.value)))
   }
 
   private def superResultMap(results : JavaList[thrift.SuperColumn]) : Map[A, Map[B, C]] = {
-    val r : List[thrift.SuperColumn] = results // Implicit conversion
-    ListMap(r.map(c => (serializer.superColumn.deserialize(c.name) -> resultMap(c.columns))).toSeq : _*)
+    ListMap() ++ results.map(c => (serializer.superColumn.deserialize(c.name) -> resultMap(c.columns)))
   }
 
   private def getSuperColumn(c : thrift.ColumnOrSuperColumn) : Option[Pair[A, Map[B, C]]] = {
@@ -231,12 +231,8 @@ trait Read[A, B, C] { this : Base[A, B, C] =>
     }
   }
 
-  implicit private def convertList[T](list : JavaList[T]) : List[T] = {
-    List[T]() ++ Conversions.convertList[T](list)
-  }
-
   implicit private def convertCollection[T](list : Iterable[T]) : JavaList[T] = {
     if (list eq null) null else
-    (new ArrayList() ++ list).underlying
+    Buffer() ++ list
   }
 }
